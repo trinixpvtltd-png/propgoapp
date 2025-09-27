@@ -3,12 +3,14 @@ import type { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { PrismaClient } from "./generated/prisma/index.js";
+import authRoutes from "./routes/auth.routes.js";
+import { config } from "./config/config.js";
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(config.port);
 const prisma = new PrismaClient();
 
 // Middleware
@@ -41,6 +43,10 @@ app.get("/db-test", async (req: Request, res: Response) => {
     });
   }
 });
+
+// Routes
+
+app.use("/api/auth", authRoutes);
 
 // Start server
 app.listen(PORT, () => {
