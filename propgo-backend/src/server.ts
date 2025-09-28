@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import { PrismaClient } from "./generated/prisma/index.js";
 import authRoutes from "./routes/auth.routes.js";
 import { config } from "./config/config.js";
+import userRoutes from "./routes/user.routes.js";
 
 // Load environment variables
 dotenv.config();
@@ -47,6 +48,7 @@ app.get("/db-test", async (req: Request, res: Response) => {
 // Routes
 
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 
 // Start server
 app.listen(PORT, () => {

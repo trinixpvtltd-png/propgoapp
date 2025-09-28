@@ -11,11 +11,11 @@ const prisma = new PrismaClient();
 // Helper: Generate JWT tokens
 const generateTokens = (userId: string, email: string, role: string) => {
   // Define options with proper types
-  const accessTokenOptions = {
+  const accessTokenOptions: SignOptions = {
     expiresIn: config.jwt.expiresIn as jwt.SignOptions["expiresIn"],
   };
 
-  const refreshTokenOptions = {
+  const refreshTokenOptions: SignOptions = {
     expiresIn: config.jwt.refreshExpiresIn as jwt.SignOptions["expiresIn"],
   };
 
@@ -199,5 +199,84 @@ export const logout = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Logout error:", error);
     res.status(500).json({ error: "Logout failed" });
+  }
+};
+
+// REFRESH TOKEN - Get new access token
+export const refreshToken = async (req: Request, res: Response) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({
+        error: "Refresh token required",
+      });
+    }
+
+    // Verify refresh token
+    let decoded;
+    try {
+      decoded = jwt.verify(refreshToken, config.jwt.refreshSecret) as {
+        id: string;
+      };
+    } catch (error) {
+      return res.status(401).json({
+        error: "Invalid or expired refresh token",
+      });
+    }
+
+    // Check if refresh token exists in database
+    const tokenRecord = await prisma.refreshToken.findUnique({
+      where: { token: refreshToken },
+      include: { user: true },
+    });
+
+    if (!tokenRecord) {
+      return res.status(401).json({
+        error: "Refresh token not found. Please login again.",
+      });
+    }
+
+    // Check if token expired
+    if (tokenRecord.expiresAt < new Date()) {
+      // Delete expired token
+      await prisma.refreshToken.delete({
+        where: { id: tokenRecord.id },
+      });
+
+      return res.status(401).json({
+        error: "Refresh token expired. Please login again.",
+      });
+    }
+
+    // Generate new tokens
+    const { accessToken, refreshToken: newRefreshToken } = generateTokens(
+      tokenRecord.user.id,
+      tokenRecord.user.email,
+      tokenRecord.user.role
+    );
+
+    // Update refresh token in database
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    await prisma.refreshToken.update({
+      where: { id: tokenRecord.id },
+      data: {
+        token: newRefreshToken,
+        expiresAt,
+      },
+    });
+
+    res.json({
+      message: "Token refreshed successfully",
+      accessToken,
+      refreshToken: newRefreshToken,
+    });
+  } catch (error) {
+    console.error("Refresh token error:", error);
+    res.status(500).json({
+      error: "Failed to refresh token",
+    });
   }
 };
