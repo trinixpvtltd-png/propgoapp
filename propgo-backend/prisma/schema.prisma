@@ -19,6 +19,48 @@ enum UserRole {
   ADMIN
 }
 
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  LAND
+  PLOT
+  SHOP
+}
+
+enum Authority {
+  GOVERNMENT
+  PRIVATE
+  BUILDER
+}
+
+enum ListingFor {
+  SALE
+  RENT
+}
+
+enum PropertyCategory {
+  RESIDENTIAL
+  COMMERCIAL
+}
+
+enum AreaUnit {
+  SQFT
+  SQ_YARDS
+  SQ_METERS
+  ACRES
+  HECTARES
+}
+
+enum HouseType {
+  INDEPENDENT_HOUSE
+  VILLA
+  DUPLEX
+  ROW_HOUSE
+}
+
+//------------------------------------------------------------------------------
+// Models
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -29,7 +71,9 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
+  // Relations
   refreshTokens RefreshToken[]
+  listings      Listing[]
 
   @@index([email])
 }
@@ -43,6 +87,65 @@ model RefreshToken {
   
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
+  
   @@index([userId])
   @@index([token])
 }
+
+
+model Listing {
+  id             String            @id @default(cuid())
+  userId         String
+  
+  // Basic Information
+  typeOfProperty PropertyType
+  authority      Authority
+  listingFor     ListingFor
+  category       PropertyCategory?
+  title          String
+  description    String            @db.Text
+  verified       Boolean           @default(false)
+  
+  // Location
+  address        String
+  society        String?
+  areaLocality   String
+  city           String
+  district       String
+  state          String
+  pincode        String
+  latitude       Float?
+  longitude      Float?
+  
+  // Area & Pricing
+  area           Float
+  areaUnit       AreaUnit
+  pricePerUnit   Float?
+  totalPrice     Float?
+  
+  // Layout (for APARTMENT/HOUSE)
+  floor              Int?
+  numberOfFloors     Int?
+  rooms              Int?
+  bathrooms          Int?
+  balconies          Int?
+  yearOfConstruction Int?
+  
+  // Amenities (stored as JSON array)
+  amenities String[] @default([])
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([city])
+  @@index([typeOfProperty])
+  @@index([listingFor])
+  @@index([verified])
+  @@index([createdAt])
+}
+
